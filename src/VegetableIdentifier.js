@@ -22,8 +22,9 @@ const VegetableIdentifier = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [qrData, setQrData] = useState('');
 
-  // Initialize Gemini AI
-  const genAI = new GoogleGenerativeAI('AIzaSyBXlBhkqbivYJDjY9lx4QFSF2uumr56FiQ');
+  // Initialize Gemini AI using env var (set REACT_APP_GEMINI_API_KEY)
+  const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+  const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
   const startCamera = async () => {
     try {
@@ -122,6 +123,10 @@ const VegetableIdentifier = () => {
   };
 
   const analyzeImage = async (imageToAnalyze = null) => {
+    if (!genAI) {
+      setError('API key not configured. Set REACT_APP_GEMINI_API_KEY and restart.');
+      return;
+    }
     const imageToUse = imageToAnalyze || image;
     if (!imageToUse) return;
 
