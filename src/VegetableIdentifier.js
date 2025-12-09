@@ -22,8 +22,8 @@ const VegetableIdentifier = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [qrData, setQrData] = useState('');
 
-  // Initialize Gemini AI using env var (set REACT_APP_GEMINI_API_KEY)
-  const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+  // Initialize Gemini AI with hardcoded API key
+  const apiKey = 'AIzaSyDGIgCUUYvo17Yz6Mu-s4WpAjwmABKJmJY';
   const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
   const startCamera = async () => {
@@ -124,7 +124,7 @@ const VegetableIdentifier = () => {
 
   const analyzeImage = async (imageToAnalyze = null) => {
     if (!genAI) {
-      setError('API key not configured. Set REACT_APP_GEMINI_API_KEY and restart.');
+      setError('API key not configured. Please check the API key in the code.');
       return;
     }
     const imageToUse = imageToAnalyze || image;
@@ -135,7 +135,14 @@ const VegetableIdentifier = () => {
     setResult(null);
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      // Use gemini-2.5-flash (available model) with fallback to gemini-2.0-flash-001
+      let model;
+      try {
+        model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      } catch (err) {
+        // Fallback to stable version if 2.5-flash not available
+        model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+      }
       
       const prompt = `Analyze this image of a vegetable and provide the following information in JSON format:
       {
@@ -251,7 +258,18 @@ const VegetableIdentifier = () => {
         });
       }
     } catch (err) {
-      setError('Failed to analyze image: ' + err.message);
+      let errorMessage = 'Failed to analyze image: ' + err.message;
+      
+      // Provide more helpful error messages for common issues
+      if (err.message.includes('429') || err.message.includes('quota')) {
+        errorMessage = 'API quota exceeded. Please wait a few minutes and try again, or check your usage limits at https://ai.dev/usage?tab=rate-limit';
+      } else if (err.message.includes('API_KEY_INVALID')) {
+        errorMessage = 'Invalid API key. Please check your API key configuration.';
+      } else if (err.message.includes('PERMISSION_DENIED')) {
+        errorMessage = 'Permission denied. Please ensure the Generative Language API is enabled for your API key.';
+      }
+      
+      setError(errorMessage);
       console.error('Analysis error:', err);
     } finally {
       setLoading(false);
